@@ -1,0 +1,29 @@
+{
+  "name": "bot-decorcake",
+  "version": "8.0.0",
+  "description": "Bot WhatsApp Decorcake - Sin base de datos",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "build": "echo 'No build needed'"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "decorcake",
+    "reposteria"
+  ],
+  "author": "Decorcake Loja",
+  "license": "MIT",
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.6.0",
+    "pino": "^8.16.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
