@@ -1,4 +1,4 @@
-//  🎂 BOT WHATSAPP DECORCAKE - VERSIÓN 3.2
+//  🎂 BOT WHATSAPP DECORCAKE - VERSIÓN 3.3 (24/7)
 
 const { 
     default: makeWASocket, 
@@ -9,8 +9,67 @@ const {
 } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const fs = require('fs');
+const http = require('http');
 
 require('dotenv').config();
+
+//  🌐 SERVIDOR HTTP PARA MANTENER ACTIVO 24/7
+const PORT = process.env.PORT || 3000;
+
+const server = http.createServer((req, res) => {
+    const now = new Date().toLocaleString('es-EC', { timeZone: 'America/Guayaquil' });
+    
+    if (req.url === '/health' || req.url === '/') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            status: 'online',
+            bot: 'Decorcake WhatsApp Bot',
+            version: '3.3',
+            time: now,
+            uptime: Math.floor(process.uptime()) + ' segundos'
+        }));
+    } else {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>🎂 Decorcake Bot</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: Arial; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                           min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; }
+                    .card { background: white; padding: 40px; border-radius: 20px; text-align: center; 
+                            box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; }
+                    h1 { color: #333; margin-bottom: 10px; }
+                    .status { background: #4CAF50; color: white; padding: 10px 30px; border-radius: 50px; 
+                              display: inline-block; margin: 20px 0; font-weight: bold; }
+                    .info { color: #666; margin: 10px 0; }
+                    .time { color: #999; font-size: 14px; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>🎂 Decorcake Bot</h1>
+                    <div class="status">✅ ONLINE 24/7</div>
+                    <p class="info">Bot de WhatsApp funcionando</p>
+                    <p class="info">⏱️ Uptime: ${Math.floor(process.uptime())} segundos</p>
+                    <p class="time">📅 ${now}</p>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+});
+
+server.listen(PORT, () => {
+    console.log(`🌐 Servidor HTTP activo en puerto ${PORT}`);
+});
+
+//  🔄 AUTO-PING PARA MANTENER ACTIVO
+setInterval(() => {
+    console.log('💓 Keep-alive ping');
+}, 300000);
 
 //  ⚙️ CONFIGURACIÓN
 const CONFIG = {
@@ -200,17 +259,13 @@ _Escribe una opción_ ✨`
 function esProblema(texto) {
     const t = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
-    // Palabras clave de problemas
     const problemas = [
-        // Problemas de entrega
         'no llego', 'no ha llegado', 'no me llego', 'no me ha llegado',
         'nunca llego', 'no llega', 'sin llegar', 'no lo recibi',
         'no he recibido', 'no recibi', 'sigue sin llegar',
         'pedido perdido', 'se perdio', 'extraviado',
         'demora', 'tarda mucho', 'lleva dias', 'lleva semanas',
         'hace una semana', 'hace dias', 'hace mucho',
-        
-        // Problemas con el producto
         'llego incompleto', 'incompleto', 'faltan', 'falta algo', 'faltante',
         'no vino', 'no viene', 'no incluye', 'sin incluir',
         'llego mal', 'llego danado', 'danado', 'roto', 'quebrado',
@@ -220,87 +275,54 @@ function esProblema(texto) {
         'error en', 'me mandaron otro', 'no corresponde',
         'mal estado', 'en mal estado', 'deteriorado',
         'vencido', 'caducado', 'expirado',
-        
-        // Quejas generales
         'problema', 'reclamo', 'queja', 'inconveniente',
         'molesto', 'enojado', 'decepcionado', 'insatisfecho',
         'pesimo', 'mal servicio', 'mala atencion',
-        
-        // Solicitudes de solución
         'devolucion', 'devolver', 'reembolso', 'dinero',
         'cambio', 'cambiar', 'reemplazar', 'reponer',
         'solucion', 'solucionar', 'resolver', 'arreglar',
         'compensacion', 'compensar',
-        
-        // Urgencia
         'urgente', 'ayuda', 'por favor ayuda', 'necesito ayuda'
     ];
     
     for (const p of problemas) {
         if (t.includes(p)) return true;
     }
-    
     return false;
 }
 
-//  🔍 DETECTAR INTENCIÓN NORMAL
+//  🔍 DETECTAR INTENCIÓN
 function detectar(texto) {
     const t = texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     
-    // Menú numérico
     if (t === '1') return 'catalogo';
     if (t === '2') return 'cotizacion';
     if (t === '3') return 'envios';
     if (t === '4') return 'ubicacion';
     if (t === '5') return 'reclamo';
     
-    // PROBLEMAS - Prioridad máxima
     if (esProblema(texto)) return 'reclamo';
     
-    // Saludos
     if (/^(hola|ola|hi|hey|buenas?|buenos?|saludos?|que tal|hello|inicio|menu|holi)/.test(t)) return 'bienvenida';
-    
-    // Despedidas  
     if (/^(gracias?|chao|adios|bye|hasta luego|ok gracias|listo|perfecto)$/.test(t)) return 'despedida';
     if (/gracias por/.test(t)) return 'despedida';
-    
-    // Cotización
     if (/cotiza|precio|cuanto|quiero (comprar|pedir)|necesito \d|pedido|ordenar/.test(t)) return 'cotizacion';
-    
-    // Catálogo
     if (/catalogo|productos|que (tienen|venden|hay)|ver todo|lista/.test(t)) return 'catalogo';
-    
-    // Productos específicos
     if (/molde/.test(t)) return 'moldes';
     if (/colorante|wilton|americolor/.test(t)) return 'colorantes';
     if (/decoracion|fondant|topper|vela|sprinkle/.test(t)) return 'decoraciones';
-    
-    // Envíos
     if (/envio|envian|mandan|llega a|despacho|shipping|delivery/.test(t)) return 'envios';
-    
-    // Ciudades
     if (/quito|guayaquil|cuenca|ambato|loja|manta|machala|riobamba|ibarra|esmeraldas|portoviejo|santo domingo|catamayo|zamora/.test(t)) return 'ciudad';
-    
-    // Ubicación
     if (/ubicacion|direccion|donde|local|tienda|mapa|llegar/.test(t)) return 'ubicacion';
-    
-    // Horarios
     if (/horario|hora|abren|cierran|atienden|abierto/.test(t)) return 'horarios';
-    
-    // Pagos
     if (/pago|pagar|tarjeta|transferencia|efectivo|deposito/.test(t)) return 'pago';
-    
-    // Ayuda
     if (/ayuda|opciones|menu|help/.test(t)) return 'ayuda';
     
     return null;
 }
 
-//  🔍 ES DESCRIPCIÓN DETALLADA
 function esDescripcion(texto) {
-    // Si tiene más de 20 caracteres probablemente es una descripción
     if (texto.length > 20) return true;
-    // Si menciona fechas, cantidades o detalles
     if (/\d+|semana|dias|fecha|pedido|compre|producto/.test(texto.toLowerCase())) return true;
     return false;
 }
@@ -331,72 +353,52 @@ async function procesar(sock, msg) {
         const estado = estadoUsuarios.get(tel);
         let respuesta;
         
-        // ═══ LÓGICA DE FLUJO ═══
-        
-        // RECLAMO detectado
         if (intent === 'reclamo') {
-            // Si ya estaba en reclamo Y envía descripción detallada → Registrar
             if (estado === 'reclamo' && esDescripcion(texto)) {
                 estadoUsuarios.delete(tel);
                 respuesta = R.reclamoOk;
-                console.log(`✅ [${tel.slice(-4)}] RECLAMO REGISTRADO: ${texto.slice(0, 40)}`);
-            } 
-            // Si el mensaje es largo (descripción directa del problema) → Registrar directo
-            else if (texto.length > 30) {
+                console.log(`✅ [${tel.slice(-4)}] RECLAMO REGISTRADO`);
+            } else if (texto.length > 30) {
                 estadoUsuarios.delete(tel);
                 respuesta = R.reclamoOk;
-                console.log(`✅ [${tel.slice(-4)}] RECLAMO DIRECTO: ${texto.slice(0, 40)}`);
-            }
-            // Mensaje corto → Pedir más detalles
-            else {
+                console.log(`✅ [${tel.slice(-4)}] RECLAMO DIRECTO`);
+            } else {
                 estadoUsuarios.set(tel, 'reclamo');
                 respuesta = R.reclamo;
                 console.log(`🔴 [${tel.slice(-4)}] Reclamo iniciado`);
             }
         }
-        // Estado RECLAMO esperando descripción
         else if (estado === 'reclamo') {
             estadoUsuarios.delete(tel);
             respuesta = R.reclamoOk;
             console.log(`✅ [${tel.slice(-4)}] Reclamo registrado`);
         }
-        // COTIZACIÓN detectada
         else if (intent === 'cotizacion') {
             if (estado === 'cotizacion' && esDescripcion(texto)) {
                 estadoUsuarios.delete(tel);
                 respuesta = R.cotizacionOk;
-                console.log(`✅ [${tel.slice(-4)}] Cotización recibida`);
             } else {
                 estadoUsuarios.set(tel, 'cotizacion');
                 respuesta = R.cotizacion;
-                console.log(`💰 [${tel.slice(-4)}] Cotización iniciada`);
             }
         }
-        // Estado COTIZACIÓN esperando datos
         else if (estado === 'cotizacion') {
             estadoUsuarios.delete(tel);
             respuesta = R.cotizacionOk;
-            console.log(`✅ [${tel.slice(-4)}] Cotización recibida`);
         }
-        // Bienvenida
         else if (intent === 'bienvenida') {
             estadoUsuarios.delete(tel);
             respuesta = R.bienvenida;
         }
-        // Despedida
         else if (intent === 'despedida') {
             estadoUsuarios.delete(tel);
             respuesta = R.despedida;
         }
-        // Otras intenciones
         else if (intent && R[intent]) {
             respuesta = R[intent];
-            console.log(`🎯 [${tel.slice(-4)}] ${intent}`);
         }
-        // No reconocido
         else {
             respuesta = R.ayuda;
-            console.log(`❓ [${tel.slice(-4)}] No reconocido`);
         }
         
         await sleep(700 + Math.random() * 500);
@@ -455,10 +457,10 @@ async function conectar() {
         }
         
         if (connection === 'open') {
-            console.log('\n╔════════════════════════════════════════╗');
-            console.log('║  ✅ BOT DECORCAKE CONECTADO            ║');
-            console.log('║  🎂 Versión 3.2 - Detección mejorada   ║');
-            console.log('╚════════════════════════════════════════╝\n');
+            console.log('\n╔════════════════════════════════════════════╗');
+            console.log('║  ✅ BOT DECORCAKE CONECTADO 24/7           ║');
+            console.log('║  🎂 Versión 3.3 - Always Online            ║');
+            console.log('╚════════════════════════════════════════════╝\n');
         }
     });
     
@@ -468,7 +470,7 @@ async function conectar() {
     });
 }
 
-console.log('\n🎂 DECORCAKE BOT v3.2\n');
+console.log('\n🎂 DECORCAKE BOT v3.3 - 24/7\n');
 process.on('uncaughtException', (e) => console.error('Error:', e.message));
 process.on('unhandledRejection', (e) => console.error('Rejection:', e.message));
 process.on('SIGINT', () => { console.log('\n👋 Cerrado\n'); process.exit(); });
